@@ -1,0 +1,32 @@
+h3 {
+    margin-bottom: 3rem;
+    margin-left: 15%;
+}
+
+.file-list {
+    background-color: rgba(245, 245, 245, 0.123);
+    display: flex;
+    flex-direction: column;
+    margin-left: 10%;
+    width: 80%;
+    padding: 2rem;
+    border-radius: 1rem;
+    border: 1px, solid rgba(255, 255, 255, 0.281);
+    box-shadow: inset 0 4px 4px rgba(0, 0, 0, 0.25);
+}
+
+.file {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.file-info {
+    display: flex;
+    justify-content: space-between;
+    width: 13rem;
+}
+
+a {
+    color: rgb(158, 158, 158);
+}
