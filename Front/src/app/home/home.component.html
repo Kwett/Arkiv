@@ -1,11 +1,16 @@
 <app-header></app-header>
 <h3>Chaine : <a href=''>Robin DICKINSON</a></h3>
 <div class="file-list">
-    <span class="file" *ngFor="let file of files">
-        <a  href="">{{ file.name }}</a>
-        <div class="file-info">
-            <p>{{ file.size }}Mo</p>
-            <p>{{ file.date }}</p>   
-        </div>
+    <span *ngIf="files.length > 0">
+        <li class="file" *ngFor="let file of files">
+            <a  href="">{{ file.name }}</a>
+            <div class="file-info">
+                <p>{{ file.size }}Mo</p>
+                <p>{{ file.date }}</p>   
+            </div>
+        </li>
+    </span>
+    <span *ngIf="files.length == 0">
+        <p>Pas de fichiers pour l'instant.</p>
     </span>
 </div>

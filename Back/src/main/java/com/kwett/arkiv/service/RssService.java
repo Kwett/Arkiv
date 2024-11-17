@@ -39,9 +39,9 @@ public class RssService {
     private final String downloadFolder;
 
     public RssService(
-            @Value("${video.ids.file}") String videoIdsFile,
-            @Value("${rss.url}") String rssUrl,
-            @Value("${download.folder}") String downloadFolder){
+        @Value("${video.ids.file}") String videoIdsFile,
+        @Value("${rss.url}") String rssUrl,
+        @Value("${download.folder}") String downloadFolder){
         this.videoIdsFile = videoIdsFile;
         this.rssUrl = rssUrl;
         this.downloadFolder = downloadFolder;
