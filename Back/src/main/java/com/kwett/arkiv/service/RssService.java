@@ -1,5 +1,7 @@
 package com.kwett.arkiv.service;
 
+import com.kwett.arkiv.repository.FileRepository;
+import com.kwett.arkiv.model.FileInfo;
 import com.github.kiulian.downloader.downloader.YoutubeProgressCallback;
 import com.github.kiulian.downloader.downloader.response.Response;
 import com.rometools.rome.feed.synd.SyndEntry;
@@ -19,48 +21,37 @@ import com.github.kiulian.downloader.model.videos.formats.VideoWithAudioFormat;
 import com.github.kiulian.downloader.downloader.request.RequestVideoFileDownload;
 import com.github.kiulian.downloader.downloader.request.RequestVideoInfo;
 
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.stream.Stream;
 
 @Service
 public class RssService {
 
-    private final String videoIdsFile;
     private final String rssUrl;
     private final Set<String> knownVideoIds = new HashSet<>();
     private static final Logger logger = LoggerFactory.getLogger(RssService.class);
     private final String downloadFolder;
+    private final FileRepository fileRepository;
 
     public RssService(
-        @Value("${video.ids.file}") String videoIdsFile,
         @Value("${rss.url}") String rssUrl,
-        @Value("${download.folder}") String downloadFolder){
-        this.videoIdsFile = videoIdsFile;
+        @Value("${download.folder}") String downloadFolder,
+        FileRepository fileRepository){
+        this.fileRepository = fileRepository;
         this.rssUrl = rssUrl;
         this.downloadFolder = downloadFolder;
 
-        logger.info("RSS URL: {}", rssUrl);
-        logger.info("Video IDs File: {}", videoIdsFile);
-
-        try {
-            if (!Files.exists(Paths.get(videoIdsFile))) {
-                Files.createFile(Paths.get(videoIdsFile));
-                logger.info("Fichier d'ID connu créé : {}", videoIdsFile);
-            }
-
-            try (Stream<String> lines = Files.lines(Paths.get(videoIdsFile))) {
-                lines.forEach(knownVideoIds::add);
-            }
-        } catch (IOException e) {
-            logger.warn("Erreur lors de la gestion du fichier d'ID connu : ", e);
+        List<FileInfo> existingFiles = fileRepository.findAll();
+        for (FileInfo file : existingFiles) {
+            knownVideoIds.add(file.getName());
         }
+
+        logger.info("RSS URL: {}", rssUrl);
     }
 
     @Scheduled(fixedRateString = "${rss.check.interval}")
@@ -72,12 +63,17 @@ public class RssService {
 
             for (SyndEntry entry : feed.getEntries()) {
                 String videoId = entry.getUri();
+                String videoTitle = entry.getTitle();
+                LocalDateTime publishedDate = LocalDateTime.now();
 
                 if (!knownVideoIds.contains(videoId)) {
                     knownVideoIds.add(videoId);
                     logger.info("Nouvelle vidéo détectée : Titre : {} | Lien : {}", entry.getTitle(), videoId);
-                    downloadVideo(videoId);
-                    saveKnownVideos();
+                    boolean downloaded = downloadVideo(videoId);
+                    if (downloaded) {
+                        logger.info("{} est telechargé avec succes", entry.getTitle());
+                        saveKnownVideos(videoTitle, publishedDate);
+                    }
                 }
 
             }
@@ -90,18 +86,24 @@ public class RssService {
         }
     }
 
-    private void saveKnownVideos() {
-        try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(videoIdsFile))) {
-            for (String videoId : knownVideoIds) {
-                writer.write(videoId);
-                writer.newLine();
-            }
-        } catch (IOException e) {
-            logger.error("Erreur lors de la sauvegarde des vidéos connues : ", e);
+    private void saveKnownVideos(String videoTitle, LocalDateTime publishedDate ) {
+
+        logger.info("video title : {}", videoTitle);
+        logger.info("length : {}", fileRepository.findByName(videoTitle));
+
+
+        if (fileRepository.findByName(videoTitle).isEmpty()) {
+            FileInfo newFile = new FileInfo();
+            newFile.setName(videoTitle);
+            newFile.setSize("Inconnu");
+            newFile.setDate(publishedDate);
+            fileRepository.save(newFile);
+
+            logger.info("Vidéo ajoutée en base de données : {}", videoTitle);
         }
     }
 
-    public void downloadVideo(String videoUrl) {
+    public boolean downloadVideo(String videoUrl) {
         try {
             YoutubeDownloader downloader = new YoutubeDownloader();
 
@@ -116,7 +118,7 @@ public class RssService {
                 videoId = videoUrl.replace("yt:video:", "");
             } else {
                 logger.error("URL vidéo invalide : {}", videoUrl);
-                return;
+                return false;
             }
 
             RequestVideoInfo requestInfo = new RequestVideoInfo(videoId);
@@ -131,7 +133,7 @@ public class RssService {
 
             if (details.isLive()) {
                 logger.warn("La vidéo est un live stream et ne peut pas être téléchargée pour le moment.");
-                return;
+                return false;
             }
 
 
@@ -139,7 +141,7 @@ public class RssService {
 
             if (format == null) {
                 logger.error("Aucun format vidéo avec audio disponible pour : {}", details.title());
-                return;
+                return false;
             }
 
             File downloadsDir = new File(downloadFolder);
@@ -179,6 +181,7 @@ public class RssService {
         } catch (Exception e) {
             logger.error("erreur :", e);
         }
+    return true;
     }
 }
 

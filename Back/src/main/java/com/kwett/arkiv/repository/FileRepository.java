@@ -2,6 +2,11 @@ package com.kwett.arkiv.repository;
 
 import com.kwett.arkiv.model.FileInfo;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
+@Repository
 public interface FileRepository extends JpaRepository<FileInfo, Integer> {
+    List<FileInfo> findByName(String name);
 }
