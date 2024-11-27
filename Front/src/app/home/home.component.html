@@ -5,8 +5,8 @@
         <li class="file" *ngFor="let file of files">
             <a [href]="'http://localhost:8080/files/downloads/' + file.name + '.mp4'">{{ file.name }}</a>
             <div class="file-info">
-                <p>{{ file.size }}Mo</p>
-                <p>{{ file.date }}</p>   
+                <p>{{ file.size }} Mo</p>
+                <p>{{ file.date | date: 'HH-mm' }}</p>   
             </div>
         </li>
     </span>
